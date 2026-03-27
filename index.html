@@ -105,8 +105,8 @@
         /* CONTROL MAESTRO DERECHA */
         .control-group { margin-bottom: 20px; }
         .label-row { display: flex; justify-content: space-between; font-size: 11px; margin-bottom: 8px; color: var(--text-dim); }
-        .range-slider { width: 100%; -webkit-appearance: none; height: 4px; background: rgba(255,255,255,0.1); border-radius: 5px; outline: none; }
-        .range-slider::-webkit-slider-thumb { -webkit-appearance: none; width: 14px; height: 14px; background: var(--primary); border-radius: 50%; cursor: pointer; border: 2px solid white; }
+        .range-slider { width: 100%; -webkit-appearance: none; appearance: none; height: 4px; background: rgba(255,255,255,0.1); border-radius: 5px; outline: none; }
+        .range-slider::-webkit-slider-thumb { -webkit-appearance: none; appearance: none; width: 14px; height: 14px; background: var(--primary); border-radius: 50%; cursor: pointer; border: 2px solid white; }
         
         .mode-toggles { display: flex; gap: 10px; margin-bottom: 20px; }
         .mode-btn { flex: 1; padding: 10px; border-radius: 10px; border: 1px solid var(--glass-border); background: rgba(255,255,255,0.05); color: var(--text-dim); font-size: 11px; font-weight: 700; cursor: pointer; transition: 0.3s; }
@@ -463,6 +463,39 @@
                 document.getElementById('ip-status').textContent = "ONLINE";
                 addLog(`🌐 RED: Nueva IP del ESP32 guardada: ${ip}`);
             }, 1000);
+        }
+
+        // --- AGRO-ASISTENTE IA ---
+        function showIA() {
+            const modal = document.getElementById('ia-modal');
+            const txt = document.getElementById('ia-txt');
+            
+            // Análisis avanzado basado en estados actuales
+            let diagnostico = "";
+            const h = Math.round(state.soil);
+            
+            if (h < 30) {
+                diagnostico = `<div style="color:#ef4444; font-weight:700; margin-bottom:10px;">⚠️ ALERTA: ESTRÉS HÍDRICO DETECTADO</div>
+                               La humedad del suelo está en <b>${h}%</b>. El potencial matricial es demasiado bajo para la etapa de <b>${["SEMILLA","BROTE","CRECIMIENTO","ESTABLE","PRE-FLOR","FLOR","MADUREZ"][state.day-1]}</b>. 
+                               Iniciando protocolo de riego de emergencia.`;
+            } else if (h > 80) {
+                diagnostico = `<div style="color:#10b981; font-weight:700; margin-bottom:10px;">✅ HIDRATACIÓN ÓPTIMA</div>
+                               Nivel de saturación al <b>${h}%</b>. La transpiración es eficiente a <b>${state.temp.toFixed(1)}°C</b>. 
+                               No se recomienda riego adicional en las próximas 4 horas para evitar anoxia radicular.`;
+            } else {
+                diagnostico = `<div style="color:#8b5cf6; font-weight:700; margin-bottom:10px;">✨ EQUILIBRIO SISTÉMICO</div>
+                               Humedad en <b>${h}%</b>. Los estomas están abiertos y el intercambio gaseoso es ideal. 
+                               El microclima de Riohacha está siendo compensado correctamente por el sistema IoT.`;
+            }
+
+            if (state.temp > 28) {
+                diagnostico += `<p style="margin-top:15px; font-size:11px; opacity:0.8; border-top:1px solid rgba(255,255,255,0.1); padding-top:10px;">
+                                🌡️ <b>Nota Térmica:</b> Temperatura elevada detectada. Aumentando muestreo de sensores a alta frecuencia.</p>`;
+            }
+
+            txt.innerHTML = diagnostico;
+            modal.style.display = 'flex';
+            addLog("🤖 IA: Generando diagnóstico agronómico en tiempo real...");
         }
 
         window.onload = () => { init3D(); setInterval(updateSim, 100); };
