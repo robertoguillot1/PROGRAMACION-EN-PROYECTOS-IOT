@@ -1,0 +1,867 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Sistema IoT para Riego Hidropónico – Riohacha, La Guajira</title>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800;900&display=swap" rel="stylesheet">
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+    <style>
+        :root {
+            --orange: #F7A533;
+            --red: #E5533D;
+            --teal: #10b981;
+            --teal2: #2DBFB8;
+            --blue: #3b82f6;
+            --purple: #a855f7;
+            --dark: #0f172a;
+            --surface: #1e293b;
+            --card: #162032;
+            --border-dark: rgba(255,255,255,0.08);
+            --muted: #64748b;
+            --sidebar-w: 155px;
+        }
+        * { box-sizing: border-box; margin: 0; padding: 0; }
+        html { scroll-behavior: smooth; }
+        body { font-family: 'Inter', sans-serif; background: #e8eaed; color: #1a1a1a; }
+
+        /* NAV */
+        nav {
+            position: fixed; top: 0; left: 0; right: 0; z-index: 1000;
+            background: #fff; border-bottom: 3px solid var(--orange);
+            padding: 10px 32px;
+            display: flex; align-items: center; justify-content: space-between;
+            box-shadow: 0 2px 10px rgba(0,0,0,0.08);
+        }
+        .nav-logo { display: flex; align-items: center; gap: 10px; font-size: 15px; font-weight: 800; }
+        .nav-logo span { color: var(--orange); }
+        .nav-links { display: flex; gap: 18px; flex-wrap: wrap; }
+        .nav-links a { color: #555; text-decoration: none; font-size: 12px; font-weight: 600; transition: color 0.2s; text-transform: uppercase; letter-spacing: 0.5px; }
+        .nav-links a:hover { color: var(--orange); }
+        .nav-links a.sim { background: var(--teal); color: white; padding: 6px 14px; border-radius: 6px; font-weight: 700; }
+        .nav-links a.sim:hover { background: #059669; }
+
+        /* HERO (dark full-screen) */
+        .hero-cover {
+            min-height: 100vh;
+            background: transparent; /* TRANSPARENTE para ver el canvas */
+            display: flex; flex-direction: column; align-items: center; justify-content: center;
+            text-align: center; padding: 120px 24px 80px; position: relative; overflow: hidden;
+        }
+        .hero-cover::after {
+            content: ''; position: absolute; bottom: 0; left: 0; right: 0; height: 120px;
+            background: linear-gradient(to bottom, transparent, #e8eaed); pointer-events: none;
+        }
+        /* Capa de degradados fijos para el hero */
+        .hero-gradient-overlay {
+            position: fixed; top:0; left:0; width:100vw; height:100vh;
+            background: #020f0e;
+            background-image:
+                radial-gradient(ellipse 80% 55% at 50% -5%, rgba(16,185,129,0.28) 0%, transparent 55%),
+                radial-gradient(ellipse 50% 40% at 85% 85%, rgba(59,130,246,0.12) 0%, transparent 50%);
+            z-index: -2; /* DETRÁS DE TODO, pero sobre el canvas si queremos, o debajo */
+            pointer-events: none;
+            transition: opacity 0.5s;
+        }
+        .hero-badge-dark {
+            display: inline-flex; align-items: center; gap: 8px; padding: 8px 20px;
+            border-radius: 50px; border: 1px solid rgba(16,185,129,0.5);
+            background: rgba(16,185,129,0.1); font-size: 12px; font-weight: 800; color: var(--teal);
+            margin-bottom: 28px; letter-spacing: 1.5px; text-transform: uppercase;
+        }
+        .hero-institution { font-size: 14px; color: rgba(255,255,255,0.4); margin-bottom: 28px; }
+        .hero-h1 { font-size: clamp(36px, 6.5vw, 78px); font-weight: 900; line-height: 1.05; max-width: 920px; margin-bottom: 32px; color: #fff; letter-spacing: -1px; }
+        .hero-h1 span { color: var(--teal); }
+        .hero-divider { width: 100%; max-width: 700px; border: none; border-top: 1px solid rgba(255,255,255,0.1); margin: 0 auto 32px; }
+        .hero-meta { display: flex; flex-wrap: wrap; justify-content: center; gap: 36px; margin-bottom: 44px; }
+        .hero-meta-item .h-lbl { font-size: 10px; color: rgba(255,255,255,0.3); text-transform: uppercase; letter-spacing: 1.5px; }
+        .hero-meta-item .h-val { font-size: 16px; font-weight: 700; color: #fff; margin-top: 4px; }
+        .hero-btns { display: flex; gap: 14px; flex-wrap: wrap; justify-content: center; }
+        .hbtn-p { padding: 14px 30px; background: var(--teal); border: none; border-radius: 10px; color: white; font-size: 15px; font-weight: 700; cursor: pointer; text-decoration: none; display: inline-flex; align-items: center; gap: 9px; transition: all 0.3s; }
+        .hbtn-p:hover { background: #059669; transform: translateY(-2px); }
+        .hbtn-g { padding: 14px 30px; background: transparent; border: 1px solid rgba(255,255,255,0.25); border-radius: 10px; color: #fff; font-size: 15px; font-weight: 600; cursor: pointer; text-decoration: none; display: inline-flex; align-items: center; gap: 9px; transition: all 0.3s; }
+        .hbtn-g:hover { border-color: rgba(255,255,255,0.5); background: rgba(255,255,255,0.05); }
+
+        /* SLIDE SHELL */
+        .slide {
+            background: #ffffff; /* Opaco para que solo se vean a los lados */
+            width: 100%; max-width: 1060px;
+            margin: 0 auto 32px;
+            box-shadow: 0 4px 28px rgba(0,0,0,0.13);
+            display: grid; grid-template-columns: var(--sidebar-w) 1fr;
+            min-height: 540px; position: relative; overflow: hidden;
+        }
+        .slide-sidebar {
+            background-image: url('wayuu_pattern.png');
+            background-size: cover; background-position: center top; background-repeat: repeat-y;
+        }
+        .slide-content { padding: 44px 48px 68px 44px; position: relative; }
+
+        /* TOP BADGE */
+        .slide-badge { position: absolute; top: 14px; right: 18px; font-size: 10px; color: #aaa; font-weight: 500; }
+        .slide-num { position: absolute; bottom: 18px; right: 20px; font-size: 11px; color: #ccc; font-weight: 600; }
+
+        /* SECTION LABEL */
+        .sec-label { font-size: 11px; font-weight: 800; color: var(--teal); text-transform: uppercase; letter-spacing: 2px; margin-bottom: 12px; }
+
+        /* BIG TITLE */
+        .big-title { font-size: clamp(24px, 3.5vw, 40px); font-weight: 900; color: #0f172a; margin-bottom: 14px; line-height: 1.15; }
+
+        /* SUBTITLE */
+        .slide-sub { font-size: 15px; color: var(--muted); max-width: 560px; margin-bottom: 28px; line-height: 1.7; }
+
+        /* Univ footer */
+        .univ-footer { position: absolute; bottom: 18px; right: 60px; display: flex; align-items: center; gap: 8px; }
+        .univ-logo-box { display: flex; align-items: center; gap: 6px; padding: 5px 10px; border: 1px solid #e5e7eb; border-radius: 6px; background: #fafafa; }
+        .univ-logo-box .u-icon { font-size: 16px; }
+        .univ-logo-box .u-text { font-size: 9px; font-weight: 700; color: #333; text-transform: uppercase; line-height: 1.3; }
+        .univ-logo-box .u-text span { color: var(--orange); display: block; }
+
+        /* ── DARK CARDS ── */
+        .dark-card {
+            background: var(--dark); border-radius: 16px; padding: 28px;
+            border: 1px solid var(--border-dark); margin-bottom: 16px;
+        }
+        .dark-card p { font-size: 16px; font-style: italic; color: #cbd5e1; line-height: 1.85; }
+        .dark-card p strong { color: #fff; font-style: normal; }
+        .dark-card cite { display: block; margin-top: 12px; font-size: 12px; color: #475569; font-style: normal; }
+        .dark-card::before { content: '"'; font-size: 80px; line-height: 1; color: rgba(16,185,129,0.25); font-family: Georgia, serif; display: block; margin-bottom: -20px; margin-top: -10px; }
+
+        /* COMPONENT CARD */
+        .comp-grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(200px, 1fr)); gap: 14px; margin-top: 8px; }
+        .comp-card {
+            background: var(--dark); border-radius: 14px; padding: 20px;
+            border: 1px solid var(--border-dark); transition: all 0.3s;
+        }
+        .comp-card:hover { transform: translateY(-4px); border-color: rgba(16,185,129,0.3); box-shadow: 0 12px 28px rgba(0,0,0,0.3); }
+        .comp-card .c-icon { font-size: 24px; margin-bottom: 12px; }
+        .comp-card h4 { font-size: 14px; font-weight: 700; color: #f1f5f9; margin-bottom: 6px; }
+        .comp-card p { font-size: 12px; color: #64748b; line-height: 1.6; }
+        .comp-spec { margin-top: 10px; padding: 5px 10px; border-radius: 6px; font-size: 11px; font-family: monospace; }
+
+        /* FLOW */
+        .flow-row { display: flex; align-items: center; justify-content: center; flex-wrap: wrap; gap: 4px; margin: 20px 0; padding: 20px; background: var(--dark); border-radius: 14px; }
+        .flow-step { display: flex; flex-direction: column; align-items: center; gap: 8px; padding: 12px 8px; min-width: 100px; }
+        .flow-icon { width: 56px; height: 56px; border-radius: 50%; border: 2px solid rgba(255,255,255,0.1); background: #1e293b; display: flex; align-items: center; justify-content: center; font-size: 22px; }
+        .flow-icon.active { border-color: var(--teal); box-shadow: 0 0 16px rgba(16,185,129,0.3); }
+        .flow-lbl { font-size: 11px; color: #64748b; text-align: center; line-height: 1.4; }
+        .flow-arrow { font-size: 20px; color: #334155; }
+
+        /* CONDITION CARDS */
+        .cond-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 14px; }
+        .cond-card { padding: 20px; border-radius: 12px; border: 1px solid rgba(255,255,255,0.06); }
+        .cond-card.green { background: rgba(16,185,129,0.08); border-color: rgba(16,185,129,0.2); }
+        .cond-card.red { background: rgba(239,68,68,0.08); border-color: rgba(239,68,68,0.2); }
+        .cond-card h4 { font-size: 15px; font-weight: 700; margin-bottom: 10px; }
+        .cond-card.green h4 { color: var(--teal); }
+        .cond-card.red h4 { color: #ef4444; }
+        .cond-card p { font-size: 13px; color: #94a3b8; line-height: 1.7; }
+        .badge-code { display: inline-block; padding: 2px 8px; border-radius: 5px; font-family: monospace; font-size: 12px; font-weight: 700; }
+        .badge-code.g { background: rgba(16,185,129,0.15); color: var(--teal); }
+        .badge-code.r { background: rgba(239,68,68,0.15); color: #ef4444; }
+
+        /* SPECS TABLE */
+        .specs-wrap { border-radius: 14px; overflow: hidden; border: 1px solid var(--border-dark); margin-top: 14px; background: var(--dark); }
+        .specs-wrap table { width: 100%; border-collapse: collapse; font-size: 13px; }
+        .specs-wrap th { background: rgba(16,185,129,0.12); padding: 12px 18px; text-align: left; font-size: 11px; font-weight: 800; text-transform: uppercase; letter-spacing: 1.2px; color: var(--teal); border-bottom: 1px solid var(--border-dark); }
+        .specs-wrap td { padding: 12px 18px; border-bottom: 1px solid rgba(255,255,255,0.04); color: #cbd5e1; }
+        .specs-wrap tr:last-child td { border: none; }
+        .specs-wrap tr:hover td { background: rgba(255,255,255,0.02); }
+        .tag { display: inline-block; padding: 3px 10px; border-radius: 20px; font-size: 11px; font-weight: 700; }
+        .tag-g { background: rgba(16,185,129,0.15); color: var(--teal); }
+        .tag-b { background: rgba(59,130,246,0.15); color: var(--blue); }
+        .tag-o { background: rgba(245,158,11,0.15); color: #f59e0b; }
+
+        /* BENEFITS */
+        .ben-grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(220px, 1fr)); gap: 14px; margin-top: 14px; }
+        .ben-card { padding: 26px; border-radius: 16px; background: var(--dark); border: 1px solid var(--border-dark); transition: all 0.3s; }
+        .ben-card:hover { border-color: rgba(16,185,129,0.25); transform: translateY(-4px); }
+        .ben-num { font-size: 44px; font-weight: 900; background: linear-gradient(135deg, var(--teal), var(--blue)); -webkit-background-clip: text; background-clip: text; -webkit-text-fill-color: transparent; line-height: 1; margin-bottom: 10px; }
+        .ben-card h4 { font-size: 15px; font-weight: 700; color: #f1f5f9; margin-bottom: 8px; }
+        .ben-card p { font-size: 13px; color: #64748b; line-height: 1.6; }
+
+        /* OBJ LIST */
+        .obj-list { list-style: none; margin-top: 12px; }
+        .obj-list li { display: flex; gap: 12px; align-items: flex-start; padding: 12px 0; border-bottom: 1px solid rgba(255,255,255,0.05); font-size: 14px; color: #334155; line-height: 1.7; }
+        .obj-list li:last-child { border: none; }
+        .obj-num { min-width: 28px; height: 28px; border-radius: 6px; background: var(--orange); color: white; display: flex; align-items: center; justify-content: center; font-size: 11px; font-weight: 800; flex-shrink: 0; }
+        .obj-num.t { background: var(--teal); }
+        .obj-num.b { background: var(--blue); }
+
+        /* HIGHLIGHT */
+        .h-box {
+            padding: 18px 22px; border-radius: 12px;
+            background: rgba(16,185,129,0.07); border-left: 4px solid var(--teal);
+            margin: 14px 0;
+        }
+        .h-box.red { background: rgba(229,83,61,0.07); border-color: var(--red); }
+        .h-box.blue { background: rgba(59,130,246,0.07); border-color: var(--blue); }
+        .h-box h4 { font-size: 12px; font-weight: 800; text-transform: uppercase; letter-spacing: 1px; color: var(--teal); margin-bottom: 8px; }
+        .h-box.red h4 { color: var(--red); }
+        .h-box.blue h4 { color: var(--blue); }
+        .h-box p { font-size: 14px; color: #334155; line-height: 1.75; }
+
+        /* METHOD CARDS */
+        .meth-grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(200px, 1fr)); gap: 14px; margin: 16px 0; }
+        .meth-card { background: var(--dark); border-radius: 12px; padding: 20px; border: 1px solid var(--border-dark); }
+        .meth-card .m-icon { font-size: 24px; margin-bottom: 12px; }
+        .meth-card h4 { font-size: 14px; font-weight: 700; color: #f1f5f9; margin-bottom: 6px; }
+        .meth-card p { font-size: 12px; color: #64748b; line-height: 1.6; }
+
+        /* STATS */
+        .stats-row { display: flex; justify-content: center; gap: 40px; flex-wrap: wrap; padding: 20px; background: var(--dark); border-radius: 14px; margin: 14px 0; }
+        .stat-item { text-align: center; }
+        .stat-num { font-size: 36px; font-weight: 900; color: var(--teal); }
+        .stat-lbl { font-size: 11px; color: #475569; margin-top: 4px; text-transform: uppercase; letter-spacing: 0.5px; }
+
+        /* DATA TABLE */
+        .doc-table { width: 100%; border-collapse: collapse; font-size: 13px; margin-top: 12px; }
+        .doc-table th { background: rgba(16,185,129,0.1); padding: 10px 16px; text-align: left; font-size: 11px; font-weight: 800; text-transform: uppercase; letter-spacing: 1px; color: var(--teal); border-bottom: 1px solid rgba(255,255,255,0.07); }
+        .doc-table td { padding: 10px 16px; border-bottom: 1px solid #f0f0f0; color: #334155; }
+        .doc-table tr:last-child td { border: none; }
+        .doc-table tr:hover td { background: #fafafa; }
+
+        /* IMG GALLERY */
+        .img-grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(240px, 1fr)); gap: 14px; margin-top: 16px; }
+        .img-card { border-radius: 12px; overflow: hidden; border: 1px solid #e5e7eb; cursor: zoom-in; transition: all 0.25s; }
+        .img-card:hover { transform: scale(1.02); box-shadow: 0 8px 24px rgba(0,0,0,0.15); }
+        .img-card img { width: 100%; display: block; }
+        .img-cap { padding: 10px 14px; background: var(--dark); border-top: 1px solid var(--border-dark); }
+        .img-cap h4 { font-size: 12px; font-weight: 700; color: #f1f5f9; }
+        .img-cap p { font-size: 11px; color: #475569; margin-top: 2px; }
+
+        /* CTA */
+        .cta-box { background: var(--dark); border-radius: 18px; padding: 36px; text-align: center; border: 1px solid rgba(16,185,129,0.2); margin-top: 20px; }
+        .cta-box h3 { font-size: 24px; font-weight: 800; color: #fff; margin-bottom: 10px; }
+        .cta-box p { font-size: 14px; color: #64748b; margin-bottom: 22px; }
+        .cta-btn { padding: 13px 28px; background: var(--teal); border: none; border-radius: 10px; color: white; font-size: 14px; font-weight: 700; cursor: pointer; text-decoration: none; display: inline-flex; align-items: center; gap: 9px; transition: all 0.3s; }
+        .cta-btn:hover { background: #059669; transform: translateY(-2px); }
+
+        /* ── ANIMACIONES ── */
+        @keyframes fadeUp {
+            from { opacity:0; transform:translateY(36px); }
+            to   { opacity:1; transform:translateY(0); }
+        }
+        @keyframes fadeLeft {
+            from { opacity:0; transform:translateX(-40px); }
+            to   { opacity:1; transform:translateX(0); }
+        }
+        @keyframes fadeRight {
+            from { opacity:0; transform:translateX(40px); }
+            to   { opacity:1; transform:translateX(0); }
+        }
+        @keyframes scaleIn {
+            from { opacity:0; transform:scale(0.85); }
+            to   { opacity:1; transform:scale(1); }
+        }
+        @keyframes pulse-teal {
+            0%,100% { box-shadow: 0 0 0 0 rgba(16,185,129,0.5); }
+            50%      { box-shadow: 0 0 0 12px rgba(16,185,129,0); }
+        }
+        @keyframes shimmer {
+            0%   { background-position: -600px 0; }
+            100% { background-position:  600px 0; }
+        }
+        @keyframes float {
+            0%,100% { transform: translateY(0); }
+            50%      { transform: translateY(-8px); }
+        }
+        @keyframes borderGlow {
+            0%,100% { border-color: rgba(16,185,129,0.15); }
+            50%      { border-color: rgba(16,185,129,0.5); }
+        }
+
+        /* Clases de revelado */
+        .anim { opacity:0; }
+        .anim.up    { transform:translateY(36px); }
+        .anim.left  { transform:translateX(-40px); }
+        .anim.right { transform:translateX(40px); }
+        .anim.scale { transform:scale(0.85); }
+        .anim.visible {
+            opacity:1 !important;
+            transform:none !important;
+            transition: opacity 0.7s ease, transform 0.7s ease;
+        }
+
+        /* Shimmer skeleton mientras carga */
+        .card-shimmer {
+            background: linear-gradient(90deg, #1e293b 25%, #263548 50%, #1e293b 75%);
+            background-size: 600px 100%;
+            animation: shimmer 1.5s infinite;
+        }
+
+        /* Pulso en íconos activos del flujo */
+        .flow-icon.active { animation: pulse-teal 2s infinite; }
+
+        /* Float en hero badge */
+        .hero-badge-dark { animation: float 3s ease-in-out infinite; }
+
+        /* Glow continuo en comp-cards */
+        .comp-card:hover { animation: borderGlow 1.5s ease-in-out infinite; }
+
+        /* Underline animado en sec-label */
+        .sec-label {
+            position: relative;
+            display: inline-block;
+            padding-bottom: 4px;
+        }
+        .sec-label::after {
+            content: '';
+            position: absolute;
+            bottom: 0; left: 0;
+            height: 2px; width: 0;
+            background: var(--teal);
+            transition: width 0.6s ease 0.3s;
+        }
+        .sec-label.line-go::after { width: 100%; }
+
+        /* Número contador */
+        .stat-num[data-target] { transition: color 0.3s; }
+
+        /* Partículas (canvas global) */
+        #hero-canvas {
+            position: fixed;
+            top: 0; left: 0;
+            width: 100vw; height: 100vh;
+            pointer-events: none;
+            z-index: -1;
+            background: #e8eaed; /* Fondo por defecto para las slides */
+        }
+        .hero-cover > *:not(#hero-canvas) { position: relative; z-index: 1; }
+
+        /* Typing cursor */
+        .typing-cursor {
+            display: inline-block;
+            width: 3px; height: 0.85em;
+            background: var(--teal);
+            margin-left: 4px;
+            vertical-align: middle;
+            animation: blink 0.75s step-end infinite;
+        }
+        @keyframes blink {
+            0%,100% { opacity:1; } 50% { opacity:0; }
+        }
+
+        /* Barra de progreso animada */
+        .prog-bar {
+            height: 4px; border-radius: 2px;
+            background: rgba(16,185,129,0.15);
+            margin-top: 8px; overflow: hidden;
+        }
+        .prog-bar-fill {
+            height: 100%; width: 0%;
+            background: linear-gradient(90deg, var(--teal), var(--blue));
+            border-radius: 2px;
+            transition: width 1.2s cubic-bezier(0.4,0,0.2,1) 0.4s;
+        }
+
+        /* MODAL */
+        .modal { display: none; position: fixed; inset: 0; background: rgba(0,0,0,0.88); z-index: 9999; align-items: center; justify-content: center; }
+        .modal.open { display: flex; }
+        .modal img { max-width: 90vw; max-height: 90vh; border-radius: 10px; }
+        .modal-close { position: fixed; top: 18px; right: 24px; font-size: 28px; color: white; cursor: pointer; background: none; border: none; }
+
+        /* FOOTER */
+        .page-footer { max-width: 1060px; margin: 0 auto 60px; text-align: center; font-size: 12px; color: #888; display: flex; justify-content: center; gap: 24px; flex-wrap: wrap; padding: 16px; }
+        .page-footer a { color: var(--orange); text-decoration: none; }
+    </style>
+</head>
+<body>
+
+<!-- CANVAS GLOBAL PARA PARTÍCULAS -->
+<canvas id="hero-canvas" style="z-index: -1;"></canvas>
+<div class="hero-gradient-overlay" id="hero-grad"></div>
+<div class="hero-gradient-overlay" id="hero-grad"></div>
+
+<!-- NAV -->
+<nav>
+    <div class="nav-logo"><i class="fas fa-seedling" style="color:var(--orange)"></i> HydroIoT <span>La Guajira</span></div>
+    <div class="nav-links">
+        <a href="#intro">Introducción</a>
+        <a href="#problema">Problema</a>
+        <a href="#justificacion">Justificación</a>
+        <a href="#objetivos">Objetivos</a>
+        <a href="#componentes">Componentes</a>
+        <a href="#funcionamiento">Funcionamiento</a>
+        <a href="#especificaciones">Specs</a>
+        <a href="#resultados">Resultados</a>
+        <a href="index.html" class="sim"><i class="fas fa-cube"></i> Simulación</a>
+    </div>
+</nav>
+
+<!-- HERO -->
+<div class="hero-cover">
+    <div style="display: flex; align-items: center; justify-content: center; gap: 40px; text-align: left; margin-bottom: 24px; max-width: 900px; margin: 0 auto 30px;">
+        <img src="images.jfif" alt="Logo Uniguajira" style="width: 140px; border-radius: 12px; box-shadow: 0 10px 30px rgba(0,0,0,0.2);">
+        <div>
+            <div class="hero-badge-dark" style="margin: 0 0 12px 0;"><i class="fas fa-flask"></i> Proyecto de Investigación · IoT · 2026</div>
+            <div class="hero-institution" style="text-align: left; margin: 0 0 8px 0;">Facultad de Ingeniería · Electrónica en Proyectos IoT</div>
+            <h1 class="hero-h1" style="text-align: left; margin: 0; font-size: clamp(28px, 4vw, 42px);">Desarrollo de un Sistema IoT para el<br>Riego de Cultivos Hidropónicos en<br><span>Riohacha, La Guajira</span></h1>
+        </div>
+    </div>
+    <hr class="hero-divider">
+    <div class="hero-meta">
+        <div class="hero-meta-item"><div class="h-lbl">Área</div><div class="h-val">IoT · Electrónica</div></div>
+        <div class="hero-meta-item"><div class="h-lbl">Plataforma</div><div class="h-val">ESP32 + DHT22</div></div>
+        <div class="hero-meta-item"><div class="h-lbl">Simulación</div><div class="h-val">Wokwi + 3D Web</div></div>
+        <div class="hero-meta-item"><div class="h-lbl">Región</div><div class="h-val">Riohacha, La Guajira</div></div>
+        <div class="hero-meta-item"><div class="h-lbl">Año</div><div class="h-val">2026</div></div>
+    </div>
+    <div class="hero-btns">
+        <a href="#intro" class="hbtn-p"><i class="fas fa-book-open"></i> Leer Investigación</a>
+        <a href="index.html" class="hbtn-g"><i class="fas fa-cube"></i> Ver Simulación 3D</a>
+    </div>
+    
+    <div style="margin-top: 50px; opacity: 0.9;">
+        <p style="font-size: 11px; text-transform: uppercase; letter-spacing: 3px; color: var(--teal); margin-bottom: 12px; font-weight: 800;">Autores del Proyecto</p>
+        <div style="display: flex; justify-content: center; gap: 40px; font-weight: 700; color: #334155; font-size: 14px;">
+            <div style="text-align: center;"><i class="fas fa-user-graduate" style="display: block; margin-bottom: 5px; color: var(--teal);"></i> Daniela Pinto</div>
+            <div style="text-align: center;"><i class="fas fa-user-graduate" style="display: block; margin-bottom: 5px; color: var(--orange);"></i> Ares Garcia</div>
+            <div style="text-align: center;"><i class="fas fa-user-graduate" style="display: block; margin-bottom: 5px; color: var(--purple);"></i> Roberto Guillot</div>
+        </div>
+    </div>
+</div>
+
+<!-- ── SLIDE 1: INTRODUCCIÓN ── -->
+<div id="intro" class="slide">
+    <div class="slide-sidebar"></div>
+    <div class="slide-content">
+        <div class="slide-badge">Vigilada MINEDUCACIÓN</div>
+        <div class="sec-label anim left">01 · Introducción</div>
+        <h2 class="big-title anim up" data-delay="100">Automatización en la<br>Agricultura Moderna</h2>
+        <p class="slide-sub anim up" data-delay="200">En la agricultura moderna y la jardinería doméstica, la automatización es fundamental para asegurar el éxito del cultivo.</p>
+        <div class="dark-card anim up" data-delay="300">
+            <p>Este <strong>proyecto de riego automático</strong>, que utiliza un <strong>servidor web ESP32</strong>, está diseñado para monitorear la humedad, la temperatura y la humedad del suelo, a la vez que proporciona un <strong>mecanismo de riego automatizado</strong> inteligente. Con una <strong>pantalla OLED</strong> para la visualización de datos en tiempo real y una <strong>interfaz web</strong> para el control remoto, este proyecto hace que el cuidado de las plantas sea eficiente y sencillo.</p>
+            <cite>— Introducción al Proyecto de Investigación</cite>
+        </div>
+        <div class="h-box blue">
+            <h4><i class="fas fa-microchip" style="margin-right:5px;"></i> Base Tecnológica</h4>
+            <p>Al integrar <strong>IoT (Internet of Things)</strong>, logramos un sistema capaz de actuar automáticamente sobre una bomba de agua sin intervención humana, garantizando que las plantas reciban la cantidad exacta de agua en el momento preciso.</p>
+        </div>
+        <div class="univ-footer"><div class="univ-logo-box"><div class="u-icon">🎓</div><div class="u-text">UNIVERSIDAD<br>DE LA GUAJIRA<br><span>Uniguajira</span></div></div></div>
+        <div class="slide-num">01 / 10</div>
+    </div>
+</div>
+
+<!-- ── SLIDE 2: PLANTEAMIENTO ── -->
+<div id="problema" class="slide">
+    <div class="slide-sidebar"></div>
+    <div class="slide-content">
+        <div class="slide-badge">Vigilada MINEDUCACIÓN</div>
+        <div class="sec-label anim left">02 · Planteamiento del Problema</div>
+        <h2 class="big-title">Contexto Agrícola en<br>Riohacha, La Guajira</h2>
+        <p class="slide-sub anim up" data-delay="200">Las condiciones climáticas extremas dificultan el desarrollo de actividades agrícolas tradicionales.</p>
+        <div class="dark-card anim up" data-delay="300">
+            <p>Según (Martínez, 2019): "El <strong>94% del territorio es cálido y seco</strong> al nivel del mar, con temperaturas anuales promedio de 29°C". Esta escasez de recursos hídricos hace necesaria la transición a modelos más sostenibles como la <strong>hidroponía</strong>, la cual prescinde de la tierra para usar soluciones de agua enriquecida (Iberdrola, 2026).</p>
+        </div>
+        <div class="h-box red">
+            <h4><i class="fas fa-triangle-exclamation" style="margin-right:5px;"></i> El Reto del Agua</h4>
+            <p>La baja precipitación y las limitaciones en el acceso al agua en La Guajira exigen sistemas que optimicen cada gota mediante la automatización y el monitoreo IoT.</p>
+        </div>
+        <div class="univ-footer"><div class="univ-logo-box"><div class="u-icon">🎓</div><div class="u-text">UNIVERSIDAD<br>DE LA GUAJIRA<br><span>Uniguajira</span></div></div></div>
+        <div class="slide-num">02 / 10</div>
+    </div>
+</div>
+
+<!-- ── SLIDE 3: JUSTIFICACIÓN ── -->
+<div id="justificacion" class="slide">
+    <div class="slide-sidebar"></div>
+    <div class="slide-content">
+        <div class="slide-badge">Vigilada MINEDUCACIÓN</div>
+        <div class="sec-label anim left">03 · Justificación</div>
+        <h2 class="big-title">Tecnología para el<br>Desarrollo Agrícola</h2>
+        <div class="dark-card anim up" data-delay="200">
+            <p>El uso de tecnologías en la agricultura es clave para enfrentar problemáticas como la escasez de agua. Esta investigación es pertinente al proponer un <strong>sistema IoT</strong> que optimiza el uso del agua y mejora el control de las variables del cultivo, contribuyendo a la aplicación de conocimientos de <strong>ingeniería</strong> en una solución real para la región.</p>
+            <cite>— Justificación del Planteamiento</cite>
+        </div>
+        <div class="ben-grid anim up" data-delay="300">
+            <div class="ben-card anim scale" data-delay="0"><div class="ben-num">100%</div><h4>Sostenibilidad</h4><p>Promoción de prácticas agrícolas eficientes que prescinden del suelo y reducen el consumo hídrico significativamente.</p></div>
+            <div class="ben-card anim scale" data-delay="100"><div class="ben-num">RT</div><h4>Monitoreo</h4><p>Integración de sensores para el seguimiento en tiempo real, vital para reacciones rápidas ante cambios climáticos.</p></div>
+        </div>
+        <div class="univ-footer"><div class="univ-logo-box"><div class="u-icon">🎓</div><div class="u-text">UNIVERSIDAD<br>DE LA GUAJIRA<br><span>Uniguajira</span></div></div></div>
+        <div class="slide-num">03 / 10</div>
+    </div>
+</div>
+
+<!-- ── SLIDE 4: OBJETIVOS ── -->
+<div id="objetivos" class="slide">
+    <div class="slide-sidebar"></div>
+    <div class="slide-content">
+        <div class="slide-badge">Vigilada MINEDUCACIÓN</div>
+        <div class="sec-label anim left">04 · Objetivos</div>
+        <h2 class="big-title">Objetivos de la<br>Investigación</h2>
+        <div class="h-box blue">
+            <h4><i class="fas fa-bullseye" style="margin-right:5px;"></i> Objetivo General</h4>
+            <p>Implementar un sistema de IoT para la automatización del riego en cultivos hidropónicos mediante la integración de sensores y actuadores para optimizar el crecimiento vegetal en climas cálidos.</p>
+        </div>
+        <p style="font-size:12px; font-weight:800; color:#888; text-transform:uppercase; letter-spacing:1px; margin:16px 0 6px;">Objetivos Específicos</p>
+        <ul class="obj-list">
+            <li><div class="obj-num">1</div><div><strong>Analizar</strong> las condiciones agroambientales de los cultivos hidropónicos en el contexto de Riohacha, La Guajira.</div></li>
+            <li><div class="obj-num">2</div><div><strong>Diseñar</strong> la arquitectura del sistema IoT para el monitoreo y control automatizado del riego.</div></li>
+            <li><div class="obj-num t">3</div><div><strong>Implementar</strong> el firmware con sensores de humedad y temperatura junto a un servidor web para control remoto.</div></li>
+            <li><div class="obj-num b">4</div><div><strong>Evaluar</strong> el desempeño del sistema en términos de eficiencia de riego y éxito en el crecimiento de los cultivos.</div></li>
+        </ul>
+        <div class="univ-footer"><div class="univ-logo-box"><div class="u-icon">🎓</div><div class="u-text">UNIVERSIDAD<br>DE LA GUAJIRA<br><span>Uniguajira</span></div></div></div>
+        <div class="slide-num">04 / 10</div>
+    </div>
+</div>
+
+<!-- ── SLIDE 5: REFERENTE TEÓRICO ── -->
+<div id="teorico" class="slide">
+    <div class="slide-sidebar"></div>
+    <div class="slide-content">
+        <div class="slide-badge">Vigilada MINEDUCACIÓN</div>
+        <div class="sec-label anim left">05 · Referente Teórico</div>
+        <h2 class="big-title">Base Conceptual</h2>
+        <ul class="obj-list">
+            <li><div class="obj-num">IoT</div><div><strong>Internet de las Cosas:</strong> Interconexión de sensores y dispositivos para monitoreo y control en tiempo real.</div></li>
+            <li><div class="obj-num">AI</div><div><strong>Agricultura Inteligente:</strong> Uso de tecnologías para optimizar procesos agrícolas y recursos.</div></li>
+            <li><div class="obj-num">HP</div><div><strong>Hidroponía:</strong> Cultivo basado en soluciones nutritivas → Mayor control y eficiencia en el uso del agua.</div></li>
+            <li><div class="obj-num b">!</div><div><strong>Variables Críticas:</strong> Temperatura, humedad, Ph y conductividad eléctrica.</div></li>
+            <li><div class="obj-num t">⚙️</div><div><strong>Automatización:</strong> Uso de sensores → Sistema de control → Toma de decisiones autónoma.</div></li>
+        </ul>
+        <div class="univ-footer"><div class="univ-logo-box"><div class="u-icon">🎓</div><div class="u-text">UNIVERSIDAD<br>DE LA GUAJIRA<br><span>Uniguajira</span></div></div></div>
+        <div class="slide-num">05 / 12</div>
+    </div>
+</div>
+
+<!-- ── SLIDE 6: METODOLOGÍA ── -->
+<div id="metodologia" class="slide">
+    <div class="slide-sidebar"></div>
+    <div class="slide-content">
+        <div class="slide-badge">Vigilada MINEDUCACIÓN</div>
+        <div class="sec-label anim left">06 · Metodología</div>
+        <h2 class="big-title">Diseño de la<br>Investigación</h2>
+        <div class="specs-wrap">
+            <table>
+                <thead><tr><th>Tipo de Enfoque</th><th>Aplicado Cuantitativo</th></tr></thead>
+                <tbody>
+                    <tr><td><strong>Propósito</strong></td><td>Resolver el uso del agua en cultivos hidropónicos mediante un sistema IoT.</td></tr>
+                    <tr><td><strong>Diseño</strong></td><td>Experimental y transversal (Intervención y comparación de resultados).</td></tr>
+                    <tr><td><strong>Fases</strong></td><td>Diagnóstico → Diseño → Implementación → Evaluación.</td></tr>
+                    <tr><td><strong>Resultados Esperados</strong></td><td>Datos medibles sobre eficiencia hídrica y crecimiento del cultivo.</td></tr>
+                    <tr><td><strong>Enfoque Final</strong></td><td>Integración de teoría y práctica para una solución tecnológica sostenible.</td></tr>
+                </tbody>
+            </table>
+        </div>
+        <div class="univ-footer"><div class="univ-logo-box"><div class="u-icon">🎓</div><div class="u-text">UNIVERSIDAD<br>DE LA GUAJIRA<br><span>Uniguajira</span></div></div></div>
+        <div class="slide-num">06 / 12</div>
+    </div>
+</div>
+
+<!-- ── SLIDE 6: COMPONENTES ── -->
+<div id="componentes" class="slide">
+    <div class="slide-sidebar"></div>
+    <div class="slide-content">
+        <div class="slide-badge">Vigilada MINEDUCACIÓN</div>
+        <div class="sec-label anim left">06 · Hardware del Sistema</div>
+        <h2 class="big-title">Componentes utilizados</h2>
+        <p class="slide-sub anim up" data-delay="200">Cada componente cumple una función específica en el ecosistema de monitoreo y control.</p>
+        <div class="comp-grid anim up" data-delay="150">
+            <div class="comp-card anim scale" data-delay="0"><div class="c-icon">🔵</div><h4>ESP32 DevKit C v4</h4><p>Microcontrolador principal. Gestiona sensores, bomba, LCD y servidor web.</p><div class="comp-spec" style="background:rgba(16,185,129,0.1);color:var(--teal);">WiFi · GPIO · ADC · 240MHz</div></div>
+            <div class="comp-card anim scale" data-delay="80"><div class="c-icon">🌡️</div><h4>Sensor DHT22</h4><p>Temperatura y humedad ambiental. ±0.5°C de precisión. GPIO 4.</p><div class="comp-spec" style="background:rgba(245,158,11,0.1);color:#f59e0b;">GPIO 4 · ±0.5°C · ±2-5%RH</div></div>
+            <div class="comp-card anim scale" data-delay="160"><div class="c-icon">💧</div><h4>Sensor Humedad Suelo</h4><p>Mapea 0–3300mV a 0–100% de humedad del sustrato hidropónico.</p><div class="comp-spec" style="background:rgba(34,197,94,0.1);color:#22c55e;">GPIO 35 · ADC · 0-3.3V</div></div>
+            <div class="comp-card anim scale" data-delay="240"><div class="c-icon">⚡</div><h4>Módulo Relay</h4><p>Control aislado de la bomba. LOW = ON, HIGH = OFF en GPIO 13.</p><div class="comp-spec" style="background:rgba(229,83,61,0.1);color:var(--red);">GPIO 13 · LOW=ON · 5V</div></div>
+            <div class="comp-card anim scale" data-delay="320"><div class="c-icon">🖥️</div><h4>LCD 20×4 I2C</h4><p>Display de 4 líneas con temp, humedad ambiente, suelo y estado bomba.</p><div class="comp-spec" style="background:rgba(168,85,247,0.1);color:#a855f7;">SDA:21 · SCL:22 · 0x27</div></div>
+            <div class="comp-card anim scale" data-delay="400"><div class="c-icon">📡</div><h4>Servidor Web ESP32</h4><p>HTTP puerto 80, auto-refresh 5s, endpoint /toggle para control remoto.</p><div class="comp-spec" style="background:rgba(16,185,129,0.1);color:var(--teal);">Puerto 80 · /toggle · 5s</div></div>
+        </div>
+        <div class="univ-footer"><div class="univ-logo-box"><div class="u-icon">🎓</div><div class="u-text">UNIVERSIDAD<br>DE LA GUAJIRA<br><span>Uniguajira</span></div></div></div>
+        <div class="slide-num">06 / 10</div>
+    </div>
+</div>
+
+<!-- ── SLIDE 7: FUNCIONAMIENTO ── -->
+<div id="funcionamiento" class="slide">
+    <div class="slide-sidebar"></div>
+    <div class="slide-content">
+        <div class="slide-badge">Vigilada MINEDUCACIÓN</div>
+        <div class="sec-label anim left">07 · Funcionamiento</div>
+        <h2 class="big-title">¿Cómo opera<br>el sistema?</h2>
+        <p class="slide-sub anim up" data-delay="200">Flujo lógico del sistema desde la lectura de sensores hasta la activación del riego automático.</p>
+        <div class="flow-row anim up" data-delay="200">
+            <div class="flow-step"><div class="flow-icon active"><i class="fas fa-power-off" style="color:var(--teal)"></i></div><div class="flow-lbl">Inicio &amp;<br>Conexión WiFi</div></div>
+            <div class="flow-arrow">›</div>
+            <div class="flow-step"><div class="flow-icon"><i class="fas fa-gauge" style="color:#f59e0b"></i></div><div class="flow-lbl">Lectura de<br>Sensores cada 2s</div></div>
+            <div class="flow-arrow">›</div>
+            <div class="flow-step"><div class="flow-icon"><i class="fas fa-display" style="color:#a855f7"></i></div><div class="flow-lbl">Actualizar LCD<br>20×4</div></div>
+            <div class="flow-arrow">›</div>
+            <div class="flow-step"><div class="flow-icon"><i class="fas fa-code-branch" style="color:#3b82f6"></i></div><div class="flow-lbl">Verificar Umbral<br>cada 3s</div></div>
+            <div class="flow-arrow">›</div>
+            <div class="flow-step"><div class="flow-icon active"><i class="fas fa-faucet" style="color:var(--teal)"></i></div><div class="flow-lbl">Activar/Detener<br>Bomba</div></div>
+        </div>
+        <div class="cond-grid anim up" data-delay="350" style="margin-top:14px;">
+            <div class="cond-card green"><h4><i class="fas fa-circle-check" style="margin-right:6px;"></i> Condición de Riego</h4><p>La bomba se <strong style="color:var(--teal)">ACTIVA</strong> automáticamente cuando la humedad del suelo cae por debajo del <span class="badge-code g">30%</span>. Se mantiene por 10 segundos.</p></div>
+            <div class="cond-card red"><h4><i class="fas fa-circle-stop" style="margin-right:6px;"></i> Condición de Paro</h4><p>La bomba se <strong style="color:#ef4444">DETIENE</strong> cuando la humedad alcanza el <span class="badge-code r">70%</span>, evitando el exceso de agua y daño radicular.</p></div>
+        </div>
+        <div class="univ-footer"><div class="univ-logo-box"><div class="u-icon">🎓</div><div class="u-text">UNIVERSIDAD<br>DE LA GUAJIRA<br><span>Uniguajira</span></div></div></div>
+        <div class="slide-num">07 / 10</div>
+    </div>
+</div>
+
+<!-- ── SLIDE 8: ESPECIFICACIONES ── -->
+<div id="especificaciones" class="slide">
+    <div class="slide-sidebar"></div>
+    <div class="slide-content">
+        <div class="slide-badge">Vigilada MINEDUCACIÓN</div>
+        <div class="sec-label anim left">08 · Especificaciones Técnicas</div>
+        <h2 class="big-title">Parámetros<br>del sistema</h2>
+        <p class="slide-sub anim up" data-delay="200">Valores extraídos directamente del código fuente del proyecto (<code style="background:#f1f5f9;padding:2px 6px;border-radius:4px;font-size:12px;">sketch.ino</code>).</p>
+        <div class="specs-wrap">
+            <table>
+                <thead><tr><th>Parámetro</th><th>Valor</th><th>Pin / Protocolo</th><th>Estado</th></tr></thead>
+                <tbody>
+                    <tr><td>Humedad de activación (seca)</td><td>≤ 30%</td><td>GPIO 35 (ADC)</td><td><span class="tag tag-g">Activo</span></td></tr>
+                    <tr><td>Humedad de paro (húmeda)</td><td>≥ 70%</td><td>GPIO 35 (ADC)</td><td><span class="tag tag-g">Activo</span></td></tr>
+                    <tr><td>Intervalo de lectura</td><td>2000 ms</td><td>DHT22 · GPIO 4</td><td><span class="tag tag-g">Activo</span></td></tr>
+                    <tr><td>Duración del riego</td><td>10 segundos</td><td>Relay · GPIO 13</td><td><span class="tag tag-b">Configurable</span></td></tr>
+                    <tr><td>Verificación automática</td><td>3000 ms</td><td>Software</td><td><span class="tag tag-g">Activo</span></td></tr>
+                    <tr><td>Refresh servidor web</td><td>5 segundos</td><td>HTTP · Puerto 80</td><td><span class="tag tag-g">Activo</span></td></tr>
+                    <tr><td>Red WiFi (simulación)</td><td>Wokwi-GUEST</td><td>WiFi 2.4GHz</td><td><span class="tag tag-o">Simulación</span></td></tr>
+                    <tr><td>Pantalla LCD</td><td>20 cols × 4 filas</td><td>I2C · SDA:21 · SCL:22</td><td><span class="tag tag-g">Activo</span></td></tr>
+                    <tr><td>Velocidad Serial</td><td>115200 baud</td><td>UART Monitor</td><td><span class="tag tag-g">Activo</span></td></tr>
+                </tbody>
+            </table>
+        </div>
+        <div class="univ-footer"><div class="univ-logo-box"><div class="u-icon">🎓</div><div class="u-text">UNIVERSIDAD<br>DE LA GUAJIRA<br><span>Uniguajira</span></div></div></div>
+        <div class="slide-num">08 / 10</div>
+    </div>
+</div>
+
+<!-- ── SLIDE 9: EVIDENCIA GRÁFICA ── -->
+<div class="slide">
+    <div class="slide-sidebar"></div>
+    <div class="slide-content">
+        <div class="slide-badge">Vigilada MINEDUCACIÓN</div>
+        <div class="sec-label anim left">09 · Evidencia Gráfica</div>
+        <h2 class="big-title">Capturas del Sistema</h2>
+        <p class="slide-sub anim up" data-delay="200">Simulación, esquemático, PCB y vista 3D de componentes generados durante el desarrollo.</p>
+        <div class="img-grid">
+            <div class="img-card" onclick="openModal('Captura de pantalla 2026-03-26 200111.png')">
+                <img src="Captura de pantalla 2026-03-26 200111.png" alt="Simulación Wokwi">
+                <div class="img-cap"><h4>Simulación Wokwi</h4><p>ESP32 activo · LCD: "Bomba ON" · Suelo 16%</p></div>
+            </div>
+            <div class="img-card" onclick="openModal('Captura de pantalla 2026-03-27 010226.png')">
+                <img src="Captura de pantalla 2026-03-27 010226.png" alt="Esquemático">
+                <div class="img-cap"><h4>Esquemático del Circuito</h4><p>ESP32 – DHT22 – Relay · KiCad</p></div>
+            </div>
+            <div class="img-card" onclick="openModal('Captura de pantalla 2026-03-27 010505.png')">
+                <img src="Captura de pantalla 2026-03-27 010505.png" alt="Diseño PCB">
+                <div class="img-cap"><h4>Diseño PCB</h4><p>Layout 120.65 × 88.9 mm · KiCad</p></div>
+            </div>
+            <div class="img-card" onclick="openModal('Captura de pantalla 2026-03-27 010530.png')">
+                <img src="Captura de pantalla 2026-03-27 010530.png" alt="Vista 3D">
+                <div class="img-cap"><h4>Vista 3D de Componentes</h4><p>ESP32 · DHT22 · Relay · R10K · Terminal</p></div>
+            </div>
+        </div>
+        <div class="univ-footer"><div class="univ-logo-box"><div class="u-icon">🎓</div><div class="u-text">UNIVERSIDAD<br>DE LA GUAJIRA<br><span>Uniguajira</span></div></div></div>
+        <div class="slide-num">09 / 10</div>
+    </div>
+</div>
+
+<!-- ── SLIDE 10: RESULTADOS ── -->
+<div id="resultados" class="slide">
+    <div class="slide-sidebar"></div>
+    <div class="slide-content">
+        <div class="slide-badge">Vigilada MINEDUCACIÓN</div>
+        <div class="sec-label anim left">10 · Resultados</div>
+        <h2 class="big-title">Resultados<br>Obtenidos</h2>
+        <p class="slide-sub anim up" data-delay="200">La simulación en Wokwi verificó el correcto funcionamiento de todos los subsistemas del proyecto.</p>
+        <div class="stats-row anim scale" data-delay="200">
+            <div class="stat-item"><div class="stat-num" data-target="100%">100%</div><div class="stat-lbl">Activaciones correctas de la bomba</div></div>
+            <div class="stat-item"><div class="stat-num" style="color:var(--orange)" data-target="3">&lt;3s</div><div class="stat-lbl">Tiempo detección → activación</div></div>
+            <div class="stat-item"><div class="stat-num" data-target="90%">90%</div><div class="stat-lbl">Ahorro estimado de agua</div></div>
+            <div class="stat-item"><div class="stat-num" style="color:var(--red)" data-target="$15">$15</div><div class="stat-lbl">Costo hardware (USD)</div></div>
+        </div>
+        <div class="h-box" style="margin-top:14px;">
+            <h4><i class="fas fa-chart-line" style="margin-right:5px;"></i> Proyección de Impacto</h4>
+            <p>Se estima un ahorro de <strong>40–70 litros de agua por m² de cultivo por semana</strong> frente al riego manual, crítico dada la situación hídrica de Riohacha. El sistema es replicable a menos de $15 USD con componentes disponibles localmente.</p>
+        </div>
+        <div class="cta-box anim up" data-delay="300">
+            <div class="hero-badge-dark" style="margin: 0 auto 16px; display:inline-flex;"><i class="fas fa-flask"></i> Simulación Interactiva Disponible</div>
+            <h3>Ver el sistema en acción</h3>
+            <p>7 días de crecimiento · Activación de bomba · Ciclo día/noche · Parámetros configurables</p>
+            <a href="index.html" class="cta-btn"><i class="fas fa-cube"></i> Abrir Simulación 3D</a>
+        </div>
+        <div class="univ-footer"><div class="univ-logo-box"><div class="u-icon">🎓</div><div class="u-text">UNIVERSIDAD<br>DE LA GUAJIRA<br><span>Uniguajira</span></div></div></div>
+        <div class="slide-num">10 / 10</div>
+    </div>
+</div>
+
+<!-- ── SLIDE 11: CONCLUSIONES ── -->
+<div id="conclusiones" class="slide">
+    <div class="slide-sidebar"></div>
+    <div class="slide-content">
+        <div class="slide-badge">Vigilada MINEDUCACIÓN</div>
+        <div class="sec-label anim left">11 · Conclusiones</div>
+        <h2 class="big-title">Conclusiones Finales</h2>
+        <div class="dark-card anim up" data-delay="200">
+            <p>El desarrollo de este proyecto evidencia que la implementación de un <strong>sistema IoT</strong> en cultivos hidropónicos es una solución efectiva para optimizar el uso del agua y mejorar el control de variables esenciales como la humedad, temperatura y nutrientes.</p>
+        </div>
+        <div class="h-box green" style="margin-top:14px;">
+            <p>Se logra aumentar la eficiencia del sistema, reducir el desperdicio de recursos y garantizar condiciones más estables para el crecimiento de los cultivos en el contexto de <strong>Riohacha, La Guajira</strong>.</p>
+        </div>
+        <p class="slide-sub anim up" data-delay="300" style="font-size:14px; margin-top:15px;">Esta propuesta no solo aporta a la modernización de la agricultura, sino que promueve el uso de tecnologías aplicadas como herramienta clave para el desarrollo ambiental y social de la región.</p>
+        <div class="univ-footer"><div class="univ-logo-box"><div class="u-icon">🎓</div><div class="u-text">UNIVERSIDAD<br>DE LA GUAJIRA<br><span>Uniguajira</span></div></div></div>
+        <div class="slide-num">11 / 12</div>
+    </div>
+</div>
+
+<!-- ── SLIDE 12: BIBLIOGRAFÍA ── -->
+<div id="bibliografia" class="slide">
+    <div class="slide-sidebar"></div>
+    <div class="slide-content">
+        <div class="slide-badge">Vigilada MINEDUCACIÓN</div>
+        <div class="sec-label anim left">12 · Bibliografía</div>
+        <h2 class="big-title">Referencias</h2>
+        <ul class="obj-list" style="font-size:11px;">
+            <li><div>Iberdrola. (2026). Obtenido de <a href="https://www.iberdrola.com/sostenibilidad/que-es-hidroponia-y-ventajas" target="_blank" style="color:var(--teal)">https://www.iberdrola.com/sostenibilidad/que-es-hidroponia-y-ventajas</a></div></li>
+            <li><div>IBM. (s.f.). Obtenido de <a href="https://www.ibm.com/es-es/think/topics/internet-of-things" target="_blank" style="color:var(--teal)">https://www.ibm.com/es-es/think/topics/internet-of-things</a></div></li>
+            <li><div>Martínez, A. G. (2019). Clima de La Guajira. Obtenido de Todacolombia: <a href="https://www.todacolombia.com/departamentos-de-colombia/la-guajira/clima.html" target="_blank" style="color:var(--teal)">https://www.todacolombia.com/clima.html</a></div></li>
+            <li><div>AgroNet. MinAgricultura. (s.f.). Beneficios de cultivos hidropónicos. <a href="https://agronet.gov.co/noticias/los-beneficios-de-los-cultivos-hidroponicos" target="_blank" style="color:var(--teal)">https://agronet.gov.co/noticias/...</a></div></li>
+            <li><div>Wokwi Simulator. (2025). Proyecto IoT Hidropónico - Simulación de Circuitos. <a href="https://wokwi.com/projects/459429812989640705" target="_blank" style="color:var(--teal)">https://wokwi.com/projects/459429812989640705</a></div></li>
+        </ul>
+        <div class="cta-box anim up" style="margin-top:20px; padding:25px;">
+            <h3>Sustentación Finalizada</h3>
+            <p>Proyecto IoT · Universidad de La Guajira · 2026</p>
+            <a href="index.html" class="cta-btn"><i class="fas fa-play"></i> Regresar al Dashboard</a>
+        </div>
+        <div class="univ-footer"><div class="univ-logo-box"><div class="u-icon">🎓</div><div class="u-text">UNIVERSIDAD<br>DE LA GUAJIRA<br><span>Uniguajira</span></div></div></div>
+        <div class="slide-num">12 / 12</div>
+    </div>
+</div>
+
+<!-- MODAL -->
+<div class="modal" id="img-modal" onclick="closeModal()">
+    <button class="modal-close" onclick="closeModal()">✕</button>
+    <img id="modal-img" src="" alt="">
+</div>
+
+<script>
+    // ── PARTÍCULAS GLOBAL ──
+    const canvas = document.getElementById('hero-canvas');
+    const grad = document.getElementById('hero-grad');
+    const ctx = canvas.getContext('2d');
+    let particles = [];
+    function resizeCanvas() { canvas.width = window.innerWidth; canvas.height = window.innerHeight; }
+    resizeCanvas();
+    window.addEventListener('resize', resizeCanvas);
+
+    class Particle {
+        constructor() { this.reset(); }
+        reset() {
+            this.x = Math.random() * canvas.width;
+            this.y = Math.random() * canvas.height;
+            this.r = Math.random() * 2 + 0.3;
+            this.speed = Math.random() * 0.3 + 0.1;
+            this.angle = Math.random() * Math.PI * 2;
+            this.alpha = Math.random() * 0.6 + 0.3; // Más opacas
+            this.color = Math.random() > 0.5 ? '16,185,129' : '59,130,246';
+        }
+        update() {
+            this.x += Math.cos(this.angle) * this.speed;
+            this.y += Math.sin(this.angle) * this.speed;
+            if(this.x < 0) this.x = canvas.width;
+            if(this.x > canvas.width) this.x = 0;
+            if(this.y < 0) this.y = canvas.height;
+            if(this.y > canvas.height) this.y = 0;
+        }
+        draw() {
+            ctx.beginPath();
+            ctx.arc(this.x, this.y, this.r, 0, Math.PI*2);
+            ctx.fillStyle = `rgba(${this.color},${this.alpha})`;
+            ctx.fill();
+        }
+    }
+    for(let i=0; i<120; i++) particles.push(new Particle());
+
+    function animParticles() {
+        const scroll = window.scrollY;
+        const heroHeight = window.innerHeight;
+        const ratio = Math.min(scroll / (heroHeight * 0.8), 1);
+        
+        // Color fondo (Canvas): de oscuro #030f0e a gris #e8eaed
+        const r = Math.round(3 + (232 - 3) * ratio);
+        const g = Math.round(15 + (234 - 15) * ratio);
+        const b = Math.round(14 + (237 - 14) * ratio);
+        
+        ctx.fillStyle = `rgb(${r},${g},${b})`;
+        ctx.fillRect(0, 0, canvas.width, canvas.height);
+        
+        // Desvanecer degradados sutiles del hero
+        if(grad) grad.style.opacity = Math.max(0, 1 - ratio * 1.5);
+        
+        particles.forEach(p => { p.update(); p.draw(); });
+        requestAnimationFrame(animParticles);
+    }
+    animParticles();
+
+    // ── SCROLL REVEAL ──
+    const animEls = document.querySelectorAll('.anim');
+    const revealObs = new IntersectionObserver((entries) => {
+        entries.forEach(e => {
+            if(e.isIntersecting) {
+                const delay = e.target.dataset.delay || 0;
+                setTimeout(() => e.target.classList.add('visible'), delay);
+            }
+        });
+    }, { threshold: 0.1 });
+    animEls.forEach(el => revealObs.observe(el));
+
+    // ── SEC-LABEL UNDERLINE ──
+    const labelObs = new IntersectionObserver((entries) => {
+        entries.forEach(e => { if(e.isIntersecting) e.target.classList.add('line-go'); });
+    }, { threshold: 0.5 });
+    document.querySelectorAll('.sec-label').forEach(el => labelObs.observe(el));
+
+    // ── COUNTER ANIMADO ──
+    function animateCounter(el) {
+        const raw = el.dataset.target;
+        const isPercent = raw.includes('%');
+        const isTime = raw.includes('s') && !raw.includes('$');
+        const isDollar = raw.includes('$');
+        const num = parseFloat(raw.replace(/[^0-9.]/g, ''));
+        if(isNaN(num)) return;
+        const duration = 1800;
+        const start = performance.now();
+        function update(now) {
+            const t = Math.min((now - start) / duration, 1);
+            const ease = 1 - Math.pow(1 - t, 3);
+            const val = Math.round(ease * num);
+            el.textContent = (isDollar ? '$' : '') + val + (isPercent ? '%' : '') + (isTime ? 's' : '');
+            if(t < 1) requestAnimationFrame(update);
+        }
+        requestAnimationFrame(update);
+    }
+    const cntObs = new IntersectionObserver((entries) => {
+        entries.forEach(e => {
+            if(e.isIntersecting && !e.target.dataset.counted) {
+                e.target.dataset.counted = '1';
+                animateCounter(e.target);
+            }
+        });
+    }, { threshold: 0.5 });
+    document.querySelectorAll('[data-target]').forEach(el => cntObs.observe(el));
+
+    // ── BARRA DE PROGRESO ──
+    const progObs = new IntersectionObserver((entries) => {
+        entries.forEach(e => {
+            if(e.isIntersecting) {
+                e.target.querySelectorAll('.prog-bar-fill').forEach(b => {
+                    b.style.width = b.dataset.w || '80%';
+                });
+            }
+        });
+    }, { threshold: 0.3 });
+    document.querySelectorAll('.prog-bar').forEach(el => progObs.observe(el.parentElement || el));
+
+    // ── NAV SHRINK ──
+    window.addEventListener('scroll', () => {
+        document.querySelector('nav').style.padding = window.scrollY > 40 ? '7px 32px' : '10px 32px';
+    });
+
+    // ── MODAL ──
+    function openModal(src) { document.getElementById('modal-img').src = src; document.getElementById('img-modal').classList.add('open'); }
+    function closeModal() { document.getElementById('img-modal').classList.remove('open'); }
+</script>
+</body>
+</html>
